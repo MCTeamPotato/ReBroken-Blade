@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.teampotato.broken_blade.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "broken_blade.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "MixinRenderWroughtnaut"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
