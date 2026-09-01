@@ -12,7 +12,7 @@ dependencies {
     gameTestImplementation sourceSets.main.output
 }
 
-legacyForge {
+neoForge {
     addModdingDependenciesTo sourceSets.gameTest
     mods {
         regressionTests {
@@ -21,15 +21,15 @@ legacyForge {
     }
     runs {
         configureEach {
-            loadedMods = [legacyForge.mods.getByName(mod_id)]
+            loadedMods = [neoForge.mods.getByName(mod_id)]
         }
         gameTestServer {
             sourceSet = sourceSets.gameTest
-            loadedMods = [legacyForge.mods.getByName(mod_id), legacyForge.mods.regressionTests]
+            loadedMods = [neoForge.mods.getByName(mod_id), neoForge.mods.regressionTests]
             gameDirectory = project.file('build/gametest')
             jvmArgument '-Xmx1G'
             logLevel = org.slf4j.event.Level.INFO
-            systemProperty 'forge.disableVersionCheck', 'true'
+            systemProperty 'neoforge.disableVersionCheck', 'true'
         }
     }
 }

@@ -3,62 +3,60 @@ package com.teampotato.broken_blade;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
+import net.minecraft.commands.arguments.item.ItemInput;
 import net.minecraft.commands.arguments.item.ItemParser;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.slf4j.Logger;
 
 @Mod("broken_blade")
 public class BrokenBlade {
-    public static ForgeConfigSpec CLIENT_CONFIG;
-    public static ForgeConfigSpec.ConfigValue<String> ITEM;
-
-    public static ItemStack BROKEN_BLADE = null;
+    public static final ModConfigSpec CLIENT_CONFIG;
+    public static final ModConfigSpec.ConfigValue<String> ITEM;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static String cachedDefinition;
+    private static HolderLookup.Provider cachedRegistries;
+    private static ItemStack cachedItem;
 
     static {
-        ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-        BUILDER.push("Mowzie's Mobs: The Broken Blade");
-        ITEM = BUILDER.comment("Item ID, optionally followed by item NBT using /give syntax.",
-                "Example: minecraft:diamond_sword{CustomModelData:123,Damage:10}")
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
+        builder.push("Mowzie's Mobs: The Broken Blade");
+        ITEM = builder.comment("Item ID, optionally followed by 1.21.1 data components using /give syntax.",
+                "Example: minecraft:diamond_sword[minecraft:custom_model_data=123,minecraft:damage=10]")
                 .define("WroughtnautBackSword", "minecraft:diamond_sword");
-        BUILDER.pop();
-        CLIENT_CONFIG = BUILDER.build();
+        builder.pop();
+        CLIENT_CONFIG = builder.build();
     }
 
-    public BrokenBlade() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, CLIENT_CONFIG);
+    public BrokenBlade(ModContainer container) {
+        container.registerConfig(ModConfig.Type.CLIENT, CLIENT_CONFIG);
     }
 
-    public static ItemStack parseItem(String definition) throws CommandSyntaxException {
+    public static ItemStack parseItem(String definition, HolderLookup.Provider registries) throws CommandSyntaxException {
         StringReader reader = new StringReader(definition.trim());
-        ItemParser.ItemResult result = ItemParser.parseForItem(BuiltInRegistries.ITEM.asLookup(), reader);
+        ItemParser.ItemResult result = new ItemParser(registries).parse(reader);
         reader.skipWhitespace();
-        if (reader.canRead()) {
-            throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().createWithContext(reader);
-        }
-        ItemStack stack = new ItemStack(result.item());
-        if (result.nbt() != null) stack.setTag(result.nbt().copy());
-        return stack;
+        if (reader.canRead()) throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument().createWithContext(reader);
+        return new ItemInput(result.item(), result.components()).createItemStack(1, false);
     }
 
-    public static ItemStack getConfiguredItem() {
+    public static ItemStack getConfiguredItem(HolderLookup.Provider registries) {
         String definition = ITEM.get();
-        if (BROKEN_BLADE == null || !definition.equals(cachedDefinition)) {
+        if (cachedItem == null || !definition.equals(cachedDefinition) || registries != cachedRegistries) {
             cachedDefinition = definition;
+            cachedRegistries = registries;
             try {
-                BROKEN_BLADE = parseItem(definition);
+                cachedItem = parseItem(definition, registries);
             } catch (CommandSyntaxException | IllegalArgumentException exception) {
                 LOGGER.warn("Invalid WroughtnautBackSword '{}'; using diamond sword: {}", definition, exception.getMessage());
-                BROKEN_BLADE = new ItemStack(Items.DIAMOND_SWORD);
+                cachedItem = new ItemStack(Items.DIAMOND_SWORD);
             }
         }
-        return BROKEN_BLADE.copy();
+        return cachedItem.copy();
     }
 }
